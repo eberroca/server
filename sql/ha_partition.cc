@@ -6190,10 +6190,7 @@ int ha_partition::handle_ordered_index_scan(uchar *buf, bool reverse_order)
       */
       error= file->read_range_first(m_start_key.key? &m_start_key: NULL,
                                     end_range, eq_range, TRUE);
-      if (!error)
-      {
-        memcpy(rec_buf_ptr, table->record[0], m_rec_length);
-      }
+      memcpy(rec_buf_ptr, table->record[0], m_rec_length);
 
       reverse_order= FALSE;
       break;
@@ -6355,13 +6352,18 @@ void ha_partition::swap_blobs(uchar * rec_buf, Ordered_blob_storage ** storage, 
 
     if (restore)
     {
+      /*
+        We protect only blob cache (value or read_value). If the cache was
+        empty that doesn't mean the blob was empty. Blobs allocated by a
+        storage engine should work just fine.
+      */
       if (!s.blob.is_empty())
         blob->swap(s.blob, s.set_read_value);
     }
     else
     {
       bool set_read_value;
-      String *cached= blob->cached(set_read_value);
+      String *cached= blob->cached(&set_read_value);
       if (cached)
       {
         cached->swap(s.blob);
