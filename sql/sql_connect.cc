@@ -44,6 +44,11 @@
 #endif /* WITH_WSREP */
 #include "proxy_protocol.h"
 
+#ifndef DBUG_OFF
+#include "rpl_mi.h"     // for DBUG_EXECUTE_IF("CONNECT_wait")
+#include "slave.h"      // for DBUG_EXECUTE_IF("CONNECT_wait")
+#endif
+
 HASH global_user_stats, global_client_stats, global_table_stats;
 HASH global_index_stats;
 /* Protects the above global stats */
@@ -1360,6 +1365,14 @@ void do_handle_one_connection(CONNECT *connect)
     return;
   }
 
+  DBUG_EXECUTE_IF("CONNECT_wait",
+  {
+    DBUG_ASSERT(master_info_index->master_info_hash.records);
+    // this is reset in slave_prepare_for_shutdown();
+    while (master_info_index->master_info_hash.records)
+      my_sleep(100);
+  });
+
   /*
     If a thread was created to handle this connection:
     increment slow_launch_threads counter if it took more than
@@ -1373,10 +1386,10 @@ void do_handle_one_connection(CONNECT *connect)
     if (launch_time >= slow_launch_time*1000000L)
       statistic_increment(slow_launch_threads, &LOCK_status);
   }
-  delete connect;
 
-  /* Make THD visible in show processlist */
-  server_threads.insert(thd);
+  server_threads.insert(thd); // Make THD visible in show processlist
+
+  delete connect; // must be after server_threads.insert, see close_connections()
   
   thd->thr_create_utime= thr_create_utime;
   /* We need to set this because of time_out_user_resource_limits */

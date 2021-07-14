@@ -19,6 +19,7 @@
 #include <my_sys.h>                          /* pthread_handler_t */
 #include "mysql_com.h"                         /* enum_server_command */
 #include "structs.h"
+#include "sql_class.h"
 #include <mysql/psi/mysql_socket.h>
 #include <hash.h>
 
@@ -28,7 +29,7 @@
 
 struct scheduler_functions;
 
-class CONNECT : public ilink {
+class CONNECT : public THD_count, public ilink {
 public:
   /* To be copied to THD */
   Vio *vio;                           /* Copied to THD with my_net_init() */

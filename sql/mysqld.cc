@@ -1763,7 +1763,15 @@ static void close_connections(void)
   DBUG_PRINT("quit", ("Waiting for threads to die (count=%u)", THD_count::value()));
 
   while (THD_count::value() - binlog_dump_thread_count)
+  {
     my_sleep(1000);
+    /*
+      some threads might've missed the first signal. For example, a connection
+      thread won't get the signal until it has created a THD and added it to
+      the server_threads list. See do_handle_one_connection().
+    */
+    server_threads.iterate(kill_thread_phase_1);
+  }
 
   /* Kill phase 2 */
   server_threads.iterate(kill_thread_phase_2);
