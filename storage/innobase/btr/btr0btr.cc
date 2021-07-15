@@ -3141,7 +3141,7 @@ func_exit:
 @param[in,out]	page		page to remove
 @param[in]	index		index tree
 @param[in,out]	mtr		mini-transaction */
-void
+dberr_t
 btr_level_list_remove_func(
 	ulint			space,
 	const page_size_t&	page_size,
@@ -3184,6 +3184,10 @@ btr_level_list_remove_func(
 				page_id_t(space, next_page_no), page_size,
 				RW_X_LATCH, index, mtr);
 
+		if (!next_block) {
+			return DB_ERROR;
+		}
+
 		page_t*		next_page
 			= buf_block_get_frame(next_block);
 #ifdef UNIV_BTR_DEBUG
@@ -3196,6 +3200,8 @@ btr_level_list_remove_func(
 				  buf_block_get_page_zip(next_block),
 				  prev_page_no, mtr);
 	}
+
+	return DB_SUCCESS;
 }
 
 /****************************************************************//**

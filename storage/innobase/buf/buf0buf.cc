@@ -4363,6 +4363,21 @@ loop:
 				return (NULL);
 			}
 
+			mutex_enter(&fil_system->mutex);
+			if (dict_table_t *table = dict_table_open_on_name(
+					fil_space_get_by_id(page_id.space())
+					->name, false,
+					false, DICT_ERR_IGNORE_NONE)) {
+				mutex_exit(&fil_system->mutex);
+
+				if (dict_table_is_discarded(table)) {
+					dict_table_close(table, false, false);
+					return NULL;
+				}
+
+				dict_table_close(table, false, false);
+			}
+
 			ib::fatal() << "Unable to read page " << page_id
 				<< " into the buffer pool after "
 				<< BUF_PAGE_READ_MAX_RETRIES
