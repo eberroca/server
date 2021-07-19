@@ -176,7 +176,7 @@ struct fil_space_crypt_t : st_encryption_scheme
 	It should be called during ibd file creation.
 	@param[in]	flags	tablespace flags
 	@param[in,out]	page	first page of the tablespace */
-	void fill_page0(ulint flags, byte* page);
+	void fill_page0(uint32_t flags, byte* page);
 
 	/** Write encryption metadata to the first page.
 	@param[in,out]	block	first page of the tablespace
@@ -297,20 +297,20 @@ byte* fil_space_encrypt(
 
 /** Decrypt a page.
 @param]in]	space_id		space id
+@param[in]	fsp_flags		Tablespace flags
 @param[in]	crypt_data		crypt_data
 @param[in]	tmp_frame		Temporary buffer
 @param[in]	physical_size		page size
-@param[in]	fsp_flags		Tablespace flags
 @param[in,out]	src_frame		Page to decrypt
 @param[out]	err			DB_SUCCESS or DB_DECRYPTION_FAILED
 @return true if page decrypted, false if not.*/
 bool
 fil_space_decrypt(
-	ulint			space_id,
+	uint32_t		space_id,
+	uint32_t		fsp_flags,
 	fil_space_crypt_t*	crypt_data,
 	byte*			tmp_frame,
 	ulint			physical_size,
-	ulint			fsp_flags,
 	byte*			src_frame,
 	dberr_t*		err);
 

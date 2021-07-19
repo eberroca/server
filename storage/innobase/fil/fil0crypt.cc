@@ -376,10 +376,7 @@ void fil_crypt_parse(fil_space_t* space, const byte* data)
 It should be called during ibd file creation.
 @param[in]	flags	tablespace flags
 @param[in,out]	page	first page of the tablespace */
-void
-fil_space_crypt_t::fill_page0(
-	ulint	flags,
-	byte*	page)
+void fil_space_crypt_t::fill_page0(uint32_t flags, byte *page)
 {
 	const uint len = sizeof(iv);
 	const ulint offset = FSP_HEADER_OFFSET
@@ -809,20 +806,20 @@ static bool fil_space_decrypt_for_non_full_checksum(
 
 /** Decrypt a page.
 @param[in]	space_id		tablespace id
+@param[in]	fsp_flags		Tablespace flags
 @param[in]	crypt_data		crypt_data
 @param[in]	tmp_frame		Temporary buffer
 @param[in]	physical_size		page size
-@param[in]	fsp_flags		Tablespace flags
 @param[in,out]	src_frame		Page to decrypt
 @param[out]	err			DB_SUCCESS or DB_DECRYPTION_FAILED
 @return true if page decrypted, false if not.*/
 bool
 fil_space_decrypt(
-	ulint			space_id,
+	uint32_t		space_id,
+	uint32_t		fsp_flags,
 	fil_space_crypt_t*	crypt_data,
 	byte*			tmp_frame,
 	ulint			physical_size,
-	ulint			fsp_flags,
 	byte*			src_frame,
 	dberr_t*		err)
 {
@@ -856,9 +853,9 @@ fil_space_decrypt(
 	ut_ad(space->crypt_data != NULL && space->crypt_data->is_encrypted());
 	ut_ad(space->referenced());
 
-	bool encrypted = fil_space_decrypt(space->id, space->crypt_data,
+	bool encrypted = fil_space_decrypt(space->id, space->flags,
+					   space->crypt_data,
 					   tmp_frame, physical_size,
-					   space->flags,
 					   src_frame, &err);
 
 	if (err == DB_SUCCESS) {
@@ -1426,7 +1423,7 @@ inline fil_space_t *fil_system_t::default_encrypt_next(fil_space_t *space,
   mysql_mutex_assert_owner(&mutex);
 
   auto it= space && space->is_in_default_encrypt
-    ? sized_ilist<fil_space_t, rotation_list_tag_t>::iterator(space)
+    ? sized_ilist<fil_space_t, default_encrypt_tag_t>::iterator(space)
     : default_encrypt_tables.begin();
   const auto end= default_encrypt_tables.end();
 
@@ -1920,7 +1917,7 @@ fil_crypt_rotate_pages(
 	const key_state_t*	key_state,
 	rotate_thread_t*	state)
 {
-	ulint space_id = state->space->id;
+	const uint32_t space_id = state->space->id;
 	uint32_t end = std::min(state->offset + uint32_t(state->batch),
 				state->space->free_limit);
 
