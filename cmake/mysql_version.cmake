@@ -23,15 +23,15 @@ SET(DOT_FRM_VERSION "6")
 
 # Generate "something" to trigger cmake rerun when VERSION changes
 CONFIGURE_FILE(
-  ${CMAKE_SOURCE_DIR}/VERSION
+  ${CMAKE_SOURCE_DIR}/VERSION.txt
   ${CMAKE_BINARY_DIR}/VERSION.dep
 )
 
-# Read value for a variable from VERSION.
+# Read value for a variable from VERSION.txt.
 
 MACRO(MYSQL_GET_CONFIG_VALUE keyword var)
  IF(NOT ${var})
-   FILE (STRINGS ${CMAKE_SOURCE_DIR}/VERSION str REGEX "^[ ]*${keyword}=")
+   FILE (STRINGS ${CMAKE_SOURCE_DIR}/VERSION.txt str REGEX "^[ ]*${keyword}=")
    IF(str)
      STRING(REPLACE "${keyword}=" "" str ${str})
      STRING(REGEX REPLACE  "[ ].*" ""  str "${str}")
@@ -52,7 +52,7 @@ MACRO(GET_MYSQL_VERSION)
 IF(NOT "${MAJOR_VERSION}" MATCHES "[0-9]+" OR
    NOT "${MINOR_VERSION}" MATCHES "[0-9]+" OR
    NOT "${PATCH_VERSION}" MATCHES "[0-9]+")
-    MESSAGE(FATAL_ERROR "VERSION file cannot be parsed.")
+    MESSAGE(FATAL_ERROR "VERSION.txt file cannot be parsed.")
   ENDIF()
 
   SET(VERSION "${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}${EXTRA_VERSION}")
