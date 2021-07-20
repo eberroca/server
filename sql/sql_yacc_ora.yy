@@ -10293,7 +10293,7 @@ column_default_non_parenthesized_expr:
             if (unlikely(il))
               my_yyabort_error((ER_WRONG_COLUMN_NAME, MYF(0), il->my_name()->str));
             $$= new (thd->mem_root) Item_default_value(thd, Lex->current_context(),
-                                                         $3);
+                                                           $3);
             if (unlikely($$ == NULL))
               MYSQL_YYABORT;
             Lex->default_used= TRUE;
@@ -13651,7 +13651,8 @@ expr_or_default:
           expr { $$= $1;}
         | DEFAULT
           {
-            $$= new (thd->mem_root) Item_default_specification(thd);
+            $$= new (thd->mem_root) Item_default_specification(thd,
+                                                        Lex->current_context());
             if (unlikely($$ == NULL))
               MYSQL_YYABORT;
           }

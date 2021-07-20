@@ -9333,7 +9333,12 @@ bool Item_default_value::fix_fields(THD *thd, Item **items)
   Item_field *field_arg;
   Field *def_field;
   DBUG_ASSERT(fixed == 0);
-  DBUG_ASSERT(arg);
+
+  if (!arg)
+  {
+    fixed= 1;
+    return FALSE;
+  }
 
   /*
     DEFAULT() do not need table field so should not ask handler to bring
@@ -9398,6 +9403,12 @@ bool Item_default_value::fix_fields(THD *thd, Item **items)
 error:
   context->process_error(thd);
   return TRUE;
+}
+
+bool Item_default_value::enchant_default_with_arg_processor(void *proc_arg)
+{
+  if (!arg) arg= (Item *)proc_arg;
+  return 0;
 }
 
 void Item_default_value::cleanup()
@@ -9467,8 +9478,14 @@ bool Item_default_value::send(Protocol *protocol, st_value *buffer)
 
 int Item_default_value::save_in_field(Field *field_arg, bool no_conversions)
 {
-  calculate();
-  return Item_field::save_in_field(field_arg, no_conversions);
+  if (arg)
+  {
+    calculate();
+    return Item_field::save_in_field(field_arg, no_conversions);
+  }
+
+  return field_arg->save_in_field_default_value(context->error_processor ==
+                                                &view_error_processor);
 }
 
 double Item_default_value::val_result()
@@ -9531,7 +9548,13 @@ Item *Item_default_value::transform(THD *thd, Item_transformer transformer,
                                     uchar *args)
 {
   DBUG_ASSERT(!thd->stmt_arena->is_stmt_prepare());
-  DBUG_ASSERT(arg);
+
+  /*
+    If the value of arg is NULL, then this object represents a constant,
+    so further transformation is unnecessary (and impossible).
+  */
+  if (!arg)
+    return 0;
 
   Item *new_item= arg->transform(thd, transformer, args);
   if (!new_item)

@@ -1766,6 +1766,7 @@ public:
   virtual bool limit_index_condition_pushdown_processor(void *arg) { return 0; }
   virtual bool exists2in_processor(void *arg) { return 0; }
   virtual bool find_selective_predicates_list_processor(void *arg) { return 0; }
+  virtual bool enchant_default_with_arg_processor(void *arg) { return 0; }
   bool cleanup_is_expensive_cache_processor(void *arg)
   {
     is_expensive_cache= (int8)(-1);
@@ -2089,7 +2090,7 @@ public:
     DBUG_ASSERT(0);
   }
   String *check_well_formed_result(String *str, bool send_error= 0);
-  bool eq_by_collation(Item *item, bool binary_cmp, CHARSET_INFO *cs); 
+  bool eq_by_collation(Item *item, bool binary_cmp, CHARSET_INFO *cs);
   bool too_big_for_varchar() const
   { return max_char_length() > CONVERT_IF_BIGGER_TO_BLOB; }
   void fix_length_and_charset(uint32 max_char_length_arg, CHARSET_INFO *cs)
@@ -5882,13 +5883,14 @@ class Item_default_value : public Item_field
 {
   void calculate();
 public:
-  Item *arg;
-  Field *cached_field;
   Item_default_value(THD *thd, Name_resolution_context *context_arg, Item *a)
     :Item_field(thd, context_arg, (const char *)NULL, (const char *)NULL,
                 &null_clex_str),
      arg(a), cached_field(NULL) {}
+  Item *arg;
+  Field *cached_field;
   enum Type type() const { return DEFAULT_VALUE_ITEM; }
+  bool vcol_assignment_allowed_value() const { return true; }
   bool eq(const Item *item, bool binary_cmp) const;
   bool fix_fields(THD *, Item **);
   void cleanup();
@@ -5928,6 +5930,7 @@ public:
   Item_field *field_for_view_update() { return 0; }
   bool update_vcol_processor(void *arg) { return 0; }
   bool check_func_default_processor(void *arg) { return true; }
+  bool enchant_default_with_arg_processor(void *arg);
 
   bool walk(Item_processor processor, bool walk_subquery, void *args)
   {
@@ -5936,6 +5939,26 @@ public:
   }
 
   Item *transform(THD *thd, Item_transformer transformer, uchar *args);
+};
+
+class Item_default_specification: public Item_default_value
+{
+public:
+  Item_default_specification(THD *thd, Name_resolution_context *context_arg)
+    :Item_default_value(thd, context_arg, NULL) {}
+  bool vcol_assignment_allowed_value() const { return arg == NULL; }
+  void print(String *str, enum_query_type query_type)
+  { str->append(STRING_WITH_LEN("default")); }
+  const Type_handler *real_type_handler() const
+  {
+    return &type_handler_null;
+  }
+  bool is_evaluable_expression() const { return false; }
+  bool save_in_param(THD *thd, Item_param *param)
+  {
+    param->set_default();
+    return false;
+  }
 };
 
 
@@ -5996,35 +6019,6 @@ public:
     return &type_handler_null;
   }
 };
-
-
-/*
-  <default specification> ::= DEFAULT
-*/
-class Item_default_specification:
-        public Item_contextually_typed_value_specification
-{
-public:
-  Item_default_specification(THD *thd)
-   :Item_contextually_typed_value_specification(thd)
-  { }
-  void print(String *str, enum_query_type query_type)
-  {
-    str->append(STRING_WITH_LEN("default"));
-  }
-  int save_in_field(Field *field_arg, bool no_conversions)
-  {
-    return field_arg->save_in_field_default_value(false);
-  }
-  bool save_in_param(THD *thd, Item_param *param)
-  {
-    param->set_default();
-    return false;
-  }
-  Item *get_copy(THD *thd)
-  { return get_item_copy<Item_default_specification>(thd, this); }
-};
-
 
 /**
   This class is used as bulk parameter INGNORE representation.

@@ -429,7 +429,10 @@ int mysql_update(THD *thd,
   }
 
   if (table->default_field)
+  {
+    setup_defaults(thd, fields, values);
     table->mark_default_fields_for_write(false);
+  }
 
 #ifndef NO_EMBEDDED_ACCESS_CHECKS
   /* Check values */
@@ -1924,6 +1927,8 @@ int multi_update::prepare(List<Item> &not_used_values,
       bitmap_clear_all(table->read_set);
     }
   }
+
+  setup_defaults(thd, *fields, *values);
 
   /*
     We have to check values after setup_tables to get covering_keys right in
