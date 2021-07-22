@@ -456,7 +456,7 @@ ulong delay_key_write_options;
 uint protocol_version;
 uint lower_case_table_names;
 ulong tc_heuristic_recover= 0;
-Atomic_counter<uint32_t> THD_count::count;
+Atomic_counter<uint32_t> THD_count::count, CONNECT_count::count;
 bool shutdown_wait_for_slaves;
 Atomic_counter<uint32_t> slave_open_temp_tables;
 ulong thread_created;
@@ -1719,6 +1719,9 @@ static void close_connections(void)
 #endif
   end_thr_alarm(0);			 // Abort old alarms.
 
+  while (CONNECT_count::value())
+    my_sleep(100);
+
   /*
     First signal all threads that it's time to die
     This will give the threads some time to gracefully abort their
@@ -1765,12 +1768,6 @@ static void close_connections(void)
   while (THD_count::value() - binlog_dump_thread_count)
   {
     my_sleep(1000);
-    /*
-      some threads might've missed the first signal. For example, a connection
-      thread won't get the signal until it has created a THD and added it to
-      the server_threads list. See do_handle_one_connection().
-    */
-    server_threads.iterate(kill_thread_phase_1);
   }
 
   /* Kill phase 2 */
@@ -8044,7 +8041,7 @@ static int mysql_init_variables(void)
   mqh_used= 0;
   cleanup_done= 0;
   select_errors= dropping_tables= ha_open_options=0;
-  THD_count::count= kill_cached_threads= wake_thread= 0;
+  THD_count::count= CONNECT_count::count= kill_cached_threads= wake_thread= 0;
   slave_open_temp_tables= 0;
   cached_thread_count= 0;
   opt_endinfo= using_udf_functions= 0;

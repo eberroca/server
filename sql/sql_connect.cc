@@ -44,11 +44,6 @@
 #endif /* WITH_WSREP */
 #include "proxy_protocol.h"
 
-#ifndef DBUG_OFF
-#include "rpl_mi.h"     // for DBUG_EXECUTE_IF("CONNECT_wait")
-#include "slave.h"      // for DBUG_EXECUTE_IF("CONNECT_wait")
-#endif
-
 HASH global_user_stats, global_client_stats, global_table_stats;
 HASH global_index_stats;
 /* Protects the above global stats */
@@ -1367,10 +1362,10 @@ void do_handle_one_connection(CONNECT *connect)
 
   DBUG_EXECUTE_IF("CONNECT_wait",
   {
-    DBUG_ASSERT(master_info_index->master_info_hash.records);
-    // this is reset in slave_prepare_for_shutdown();
-    while (master_info_index->master_info_hash.records)
-      my_sleep(100);
+    extern MYSQL_SOCKET unix_sock;
+    DBUG_ASSERT(unix_sock.fd >= 0);
+    while (unix_sock.fd >= 0)
+      my_sleep(1000);
   });
 
   /*

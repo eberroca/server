@@ -29,7 +29,7 @@
 
 struct scheduler_functions;
 
-class CONNECT : public THD_count, public ilink {
+class CONNECT : public CONNECT_count, public ilink {
 public:
   /* To be copied to THD */
   Vio *vio;                           /* Copied to THD with my_net_init() */

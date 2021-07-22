@@ -1000,9 +1000,6 @@ static inline bool is_supported_parser_charset(CHARSET_INFO *cs)
   done before any other THD constructors and decrement - after any other THD
   destructors.
 
-  It also counts CONNECT objects as they're precursors for THDs.
-  After a corresponding THD is created, its CONNECT is destroyed.
-
   Destructor unblocks close_conneciton() if there are no more THD's left.
 */
 struct THD_count
@@ -1011,6 +1008,14 @@ struct THD_count
   static uint value() { return static_cast<uint>(count); }
   THD_count() { count++; }
   ~THD_count() { count--; }
+};
+
+struct CONNECT_count
+{
+  static Atomic_counter<uint32_t> count;
+  static uint value() { return static_cast<uint>(count); }
+  CONNECT_count() { count++; }
+  ~CONNECT_count() { count--; }
 };
 
 #ifdef MYSQL_SERVER
